@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eon legion</title>
+    <link id="favicon" rel="icon" type="image/png" href="https://eon.battlecell.io/assets/images/favicon.png">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="update-notifier.css">
+    <link rel="stylesheet" href="skins.css">
+    <link rel="stylesheet" href="all.min.css">
+    <link rel="stylesheet" href="css2.css">
+<style>
+            .bot-hud {
+                position: fixed;
+                top: 10px;
+                left: 10px;
+                background: rgba(0, 0, 0, 0.8);
+                padding: 10px;
+                border-radius: 8px;
+                color: #fff;
+                font-family: 'Rajdhani', sans-serif;
+                z-index: 9999;
+                display: none;
+                flex-direction: column;
+                gap: 8px;
+                width: 240px;
+                pointer-events: auto;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(4px);
+            }
+
+            .bot-hud.visible {
+                display: flex;
+            }
+
+            .bot-header {
+                font-weight: 700;
+                font-size: 18px;
+                margin-bottom: 5px;
+                text-align: center;
+                color: #4fecff;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                padding-bottom: 5px;
+            }
+
+            .bot-controls {
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+                padding-bottom: 5px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .bot-input-row {
+                display: flex;
+                gap: 5px;
+            }
+
+            .bot-input {
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                color: white;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-family: inherit;
+                width: 100%;
+                outline: none;
+            }
+
+            .bot-input:focus {
+                border-color: #4fecff;
+            }
+
+            .bot-btn {
+                background: rgba(79, 236, 255, 0.2);
+                border: 1px solid rgba(79, 236, 255, 0.4);
+                color: #4fecff;
+                border-radius: 4px;
+                cursor: pointer;
+                padding: 4px 10px;
+                font-family: inherit;
+                font-weight: bold;
+                transition: all 0.2s;
+                flex: 1;
+            }
+
+            .bot-btn:hover {
+                background: rgba(79, 236, 255, 0.3);
+            }
+
+            .bot-btn:active {
+                transform: translateY(1px);
+            }
+
+            .bot-list {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                max-height: 300px;
+                overflow-y: auto;
+                padding-right: 4px;
+            }
+
+            /* Custom Scrollbar */
+            .bot-list::-webkit-scrollbar {
+                width: 6px;
+            }
+
+            .bot-list::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 3px;
+            }
+            .bot-list::-webkit-scrollbar-thumb:hover {
+                background: rgba(255, 255, 255, 0.3);
+            }
+
+            .bot-badge {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                background: rgba(255, 255, 255, 0.05);
+                padding: 6px 10px;
+                border-radius: 4px;
+                border: 1px solid transparent;
+                font-size: 13px;
+            }
+
+            .bot-badge.connected {
+                border-color: rgba(0, 255, 136, 0.3);
+                background: rgba(0, 255, 136, 0.05);
+            }
+
+            .bot-badge.error {
+                border-color: rgba(255, 51, 51, 0.3);
+                background: rgba(255, 51, 51, 0.05);
+            }
+
+            .bot-name {
+                font-weight: 600;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 120px;
+            }
+
+            .bot-status {
+                font-size: 12px;
+            }
+
+            .bot-status .fa-check { color: #00ff88; }
+            .bot-status .fa-xmark { color: #ff3333; }
+            .bot-status .fa-plug { color: #888; }
+            .bot-status .fa-circle-notch { color: #4fecff; animation: spin 1s linear infinite; }
+
+            @keyframes spin { 100% { transform: rotate(360deg); } }
+
+            .bot-control-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 5px;
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 4px;
+            }
+
+            .bot-checkbox-label {
+                font-size: 14px;
+                color: #ddd;
+                user-select: none;
+                cursor: pointer;
+            }
+
+            .bot-checkbox {
+                accent-color: #4fecff;
+                cursor: pointer;
+                width: 16px;
+                height: 16px;
+            }
+            
+            .bot-count-display {
+                text-align: center;
+                font-size: 12px;
+                color: #aaa;
+                margin-top: 2px;
+            }
+        </style></head>
+
+<body>
+    <div class="fullscreen-root">
+        <canvas class="game-canvas" id="gameCanvas" width="1366" height="945"></canvas>
+
+        <div id="hud-leaderboard" class="hud-leaderboard" style="display: block;">
+            <div class="lb-header">Leaderboard</div>
+            <div class="lb-content"><div class="lb-row"><span class="lb-name">Waiting for players...</span><span class="lb-mass" style="color: rgb(30, 235, 167);">[0]</span><span class="lb-position">1</span></div></div>
+        </div>
+
+        <div id="hud-bottom-left" class="hud-bottom-left">
+            <div id="chat-container" class="chat-container" style="display: flex;">
+                <div class="chat-resize-handle" id="chat-resize"></div>
+                <div class="chat-messages" id="chat-messages"><div class="chat-message-row">
+            <span class="chat-time">23:14</span>
+            <span class="chat-id"></span>
+            <span class="chat-nick" style="color: rgb(79, 236, 255);">Plz Plz:</span>
+            <span class="chat-text" style="color: rgb(221, 221, 221);">idiote</span>
+        </div><div class="chat-message-row">
+            <span class="chat-time">23:14</span>
+            <span class="chat-id"></span>
+            <span class="chat-nick" style="color: rgb(79, 236, 255);">Plz Plz:</span>
+            <span class="chat-text" style="color: rgb(221, 221, 221);">to ennemy</span>
+        </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div id="hud-bottom-center" class="hud-bottom-center">
+            <div id="stats-hud" class="stats-hud" style="display: flex;">
+            <div class="stat-badge">
+                <span>144 FPS</span>
+                <div class="stat-divider"></div>
+                <span style="color: #aaa;">144Hz</span>
+            </div>
+        
+            <div class="stat-badge">
+                <span style="color: #aaa;">Chat</span>
+                <div class="stat-divider"></div>
+                <span style="color: #00ff88;">Connected</span>
+                <i class="fa-solid fa-rotate-right hud-reconnect-btn" style="margin-left: 6px;" onclick="window.app.reconnectChat()"></i>
+            </div>
+        </div>
+            <div id="hud-server-timer" class="stat-badge server-timer-badge" style="display: block;">
+                <span>FFA EUROPE - 00h 00m 00s</span>
+            </div>
+        </div>
+    </div>
+    
+
+    <div id="chat-input-container" class="chat-input-container">
+        <div id="emoji-picker" class="emoji-picker"><div class="emoji-item" title="🙂 (:))">🙂</div><div class="emoji-item" title="😁 (:D, =D)">😁</div><div class="emoji-item" title="😂 (:&#39;))">😂</div><div class="emoji-item" title="🤣">🤣</div><div class="emoji-item" title="😉 (;))">😉</div><div class="emoji-item" title="🥰">🥰</div><div class="emoji-item" title="😎 (B))">😎</div><div class="emoji-item" title="🤔 (:thinking:)">🤔</div><div class="emoji-item" title="😐 (:|)">😐</div><div class="emoji-item" title="😮 (:O, :o)">😮</div><div class="emoji-item" title="😴 (zzz)">😴</div><div class="emoji-item" title="😭 (:&#39;()">😭</div><div class="emoji-item" title="😡 (:@, &gt;:()">😡</div><div class="emoji-item" title="🤬 (:!@#)">🤬</div><div class="emoji-item" title="💀 (:skull:)">💀</div><div class="emoji-item" title="🤡 (:clown:)">🤡</div><div class="emoji-item" title="👍 (:+1:)">👍</div><div class="emoji-item" title="👎 (:-1:)">👎</div><div class="emoji-item" title="👋 (:wave:)">👋</div><div class="emoji-item" title="👌 (:ok:)">👌</div><div class="emoji-item" title="✌ (:peace:)">✌</div><div class="emoji-item" title="🤞 (:cross:)">🤞</div><div class="emoji-item" title="❤ (&lt;3)">❤</div><div class="emoji-item" title="🧡 (&lt;3O)">🧡</div><div class="emoji-item" title="💛 (&lt;3Y)">💛</div><div class="emoji-item" title="💚 (&lt;3G)">💚</div><div class="emoji-item" title="💙 (&lt;3B)">💙</div><div class="emoji-item" title="🖤 (&lt;3K)">🖤</div><div class="emoji-item" title="🤍 (&lt;3W)">🤍</div><div class="emoji-item" title="😘 (:*, :-*)">😘</div><div class="emoji-item" title="🔥 (:fire:)">🔥</div><div class="emoji-item" title="✨ (:star:)">✨</div><div class="emoji-item" title="💯 (:100:)">💯</div><div class="emoji-item" title="💩 (:poop:)">💩</div><div class="emoji-item" title="🎉 (:tada:)">🎉</div><div class="emoji-item" title="👀 (:eyes:)">👀</div><div class="emoji-item" title="👑 (:crown:)">👑</div><div class="emoji-item" title="💎 (:gem:)">💎</div><div class="emoji-item" title="🚀 (:rocket:)">🚀</div><div class="emoji-item" title="⚽ (:soccer:)">⚽</div><div class="emoji-item" title="🤝 (:shake:)">🤝</div><div class="emoji-item" title="🙏 (:pray:)">🙏</div><div class="emoji-item" title="💪 (:muscle:)">💪</div><div class="emoji-item" title="🧠 (:brain:)">🧠</div></div>
+        <input type="text" id="chat-input" class="chat-input-field" name="chatmessage" placeholder="Press Enter to Chat..." maxlength="100" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true">
+        <div id="emoji-toggle" class="emoji-toggle">
+            <i class="fa-solid fa-face-smile"></i>
+        </div>
+    </div>
+
+    <div id="minimap-container" style="width: 200px; height: 200px; bottom: 10px; right: 10px; transform: scale(1); transform-origin: right bottom; display: flex;">
+        <canvas id="minimap" width="200" height="200"></canvas>
+    </div>
+
+    <div id="pause-hud" class="pause-hud" style="display: none;">
+        <i class="fa-solid fa-pause"></i>
+        PAUSED
+    </div>
+
+    <div id="countdown-overlay" class="countdown-overlay" style="display: none;">
+        <i class="fa-solid fa-clock countdown-icon"></i>
+        <div class="countdown-text">SERVER RESTARTING IN</div>
+        <div class="countdown-number">10</div>
+    </div>
+
+    <div class="lobby-overlay">
+        <div class="lobby-menu" style="transform: scale(0.782604);">
+            <div class="lobby-menu-bar">
+                <button class="menu-btn btn-settings">
+                    <div class="btn-content">
+                        <i class="fa-solid fa-gear"></i><span>Settings</span>
+                    </div>
+                </button>
+
+                <div class="menu-center">
+                    <div class="center-content-wrapper">
+                        <div class="skin-left" style="">
+                        </div>
+                        <div class="skin-right" style="">
+                        </div>
+                    </div>
+                </div>
+
+                <button class="menu-btn btn-play">
+                    <div class="btn-content">
+                        <i class="fa-solid fa-gamepad"></i><span>Play</span>
+                    </div>
+                </button>
+
+                <button class="menu-btn btn-spectate">
+                    <div class="btn-content">
+                        <i class="fa-solid fa-eye"></i><span>Spectate</span>
+                    </div>
+                </button>
+
+                <button class="menu-btn btn-reconnect-menu">
+                    <div class="btn-content">
+                        <i class="fa-solid fa-rotate-right"></i><span>Reconnect</span>
+                    </div>
+                </button>
+
+                <button class="menu-btn btn-skins">
+                    <div class="btn-content">
+                        <i class="fa-solid fa-images"></i><span>Skins</span>
+                    </div>
+                </button>
+            </div>
+
+            <div class="profile-selector-bar">
+                <div class="profile-slot active" data-profile="1">1</div>
+                <div class="profile-slot" data-profile="2">2</div>
+                <div class="profile-slot" data-profile="3">3</div>
+                <div class="profile-slot" data-profile="4">4</div>
+                <div class="profile-slot" data-profile="5">5</div>
+                <div class="profile-slot" data-profile="6">6</div>
+                <div class="profile-slot" data-profile="7">7</div>
+                <div class="profile-slot" data-profile="8">8</div>
+                <div class="profile-slot" data-profile="9">9</div>
+                <div class="profile-slot" data-profile="10">10</div>
+            </div>
+
+            <div class="profile-inputs-wrapper">
+                <button class="profile-nav-arrow arrow-left">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+
+                <div class="lobby-inputs-container">
+                    <div class="input-row">
+                        <input type="text" placeholder="Tag" class="lobby-input input-tag" maxlength="5">
+                        <input type="text" placeholder="Player 1" class="lobby-input input-p1" maxlength="15">
+                        <input type="text" placeholder="Player 2" class="lobby-input input-p2" maxlength="15">
+                    </div>
+                    <div class="input-row">
+                        <input type="text" placeholder="Skin URL 1" class="lobby-input input-skin1">
+                        <input type="text" placeholder="Skin URL 2" class="lobby-input input-skin2">
+                    </div>
+                    <div class="input-row">
+                        <div class="server-select-container">
+                            <div class="server-select-trigger">
+                                <span class="selected-text">FFA - EUROPE</span>
+                                <i class="fa-solid fa-chevron-down arrow-icon"></i>
+                            </div>
+                            <div class="server-options">
+                                <div class="server-option selected" data-value="wss://eu.senpa.io:2001">FFA - EUROPE
+                                </div>
+                                <div class="server-option" data-value="wss://us.senpa.io:2001">FFA - US NORTH</div>
+                                <div class="server-option" data-value="wss://eu.senpa.io:1200">DUAL - EUROPE (test)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="profile-nav-arrow arrow-right">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="reconnect-overlay" id="reconnectOverlay">
+        <div class="reconnect-box">
+            <div class="reconnect-title">Disconnected</div>
+            <div class="reconnect-message">Connection to the server was lost</div>
+            <div class="reconnect-spinner"></div>
+            <div class="reconnect-actions">
+                <button class="reconnect-btn btn-reconnect-action" id="btnReconnect">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span>Reconnect</span>
+                </button>
+                <button class="reconnect-btn btn-menu-action" id="btnMenu">
+                    <i class="fa-solid fa-house"></i>
+                    <span>Return to Menu</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-overlay" id="settingsOverlay">
+        <div class="settings-modal">
+            <div class="settings-body">
+                <div class="settings-sidebar">
+                    <button class="tab-btn active" data-tab="game"><i class="fa-solid fa-gamepad"></i> Game</button>
+                    <button class="tab-btn" data-tab="camera"><i class="fa-solid fa-video"></i> Camera</button>
+                    <button class="tab-btn" data-tab="theme"><i class="fa-solid fa-palette"></i> Theme</button>
+                    <button class="tab-btn" data-tab="elements"><i class="fa-solid fa-shapes"></i> Elements</button>
+                    <button class="tab-btn" data-tab="huds"><i class="fa-solid fa-layer-group"></i> HUDs</button>
+                    <button class="tab-btn" data-tab="chat"><i class="fa-solid fa-comment"></i> Chat</button>
+                    <button class="tab-btn" data-tab="controls"><i class="fa-solid fa-keyboard"></i> Controls</button>
+                </div>
+
+                <div class="settings-content" id="settingsContent"><div class="settings-section active"><div class="setting-group"><div><div class="setting-label">Render Quality</div><div class="setting-desc">Quality of the game</div></div><select class="custom-select"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div><div class="setting-group"><div><div class="setting-label">Cell Animation Speed</div><div class="setting-desc">Smoothness (Lower is faster)</div></div><div class="range-container"><input type="range" min="30" max="300" class="custom-range" style="background: linear-gradient(to right, rgb(79, 236, 255) 42.5926%, rgb(51, 51, 51) 42.5926%);"><div style="width: 30px; text-align: right; color: rgb(204, 204, 204); font-family: monospace;">145</div></div></div><div class="setting-group"><div><div class="setting-label">Show Eat Animation</div><div class="setting-desc">Animate cells being eaten</div></div><div class="toggle-switch active"></div></div><div class="setting-group"><div><div class="setting-label">Macro Feeding</div><div class="setting-desc">Interval in ms (Lower is faster)</div></div><div class="range-container"><input type="range" min="10" max="160" class="custom-range" style="background: linear-gradient(to right, rgb(79, 236, 255) 20%, rgb(51, 51, 51) 20%);"><div style="width: 30px; text-align: right; color: rgb(204, 204, 204); font-family: monospace;">40</div></div></div><div class="setting-group"><div><div class="setting-label">Auto Switch</div><div class="setting-desc">Switch tabs on death</div></div><div class="toggle-switch active"></div></div><div class="setting-group"><div><div class="setting-label">Show Menu on Death</div><div class="setting-desc">Show lobby when both clients die</div></div><div class="toggle-switch active"></div></div></div></div>
+            </div>
+
+            <div class="settings-footer">
+                <div style="flex: 1; display: flex; gap: 10px;">
+                    <button class="settings-action-btn" id="btnExport">Export</button>
+                    <button class="settings-action-btn" id="btnImport">Import</button>
+                    <button class="settings-action-btn btn-danger" id="btnResetAll">Reset</button>
+                    <input type="file" id="importFile" style="display: none" accept=".json">
+                </div>
+                <button class="close-settings-btn" id="closeSettingsBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SKINS OVERLAY -->
+    <div class="skins-overlay" id="skinsOverlay">
+        <div class="skins-modal">
+            <div class="skins-header">
+                <div class="skins-title">
+                    <i class="fa-solid fa-images"></i> Skin Library
+                </div>
+                <button class="skins-close-btn" id="btnCloseSkins">×</button>
+            </div>
+            <div class="skins-body">
+                <div class="skins-sidebar" id="skinsCategories">
+                    <!-- Categories generated by JS -->
+                </div>
+                <div class="skins-content" id="skinsContent">
+                    <!-- Grid items generated by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- POPUP FOR SELECTION -->
+        <div class="skin-selection-popup" id="skinSelectionPopup">
+            <div class="skin-preview-large" id="skinPopupPreview"></div>
+            <button class="popup-btn primary" id="btnSetSkinPrimary">
+                <i class="fa-solid fa-1"></i> Set Primary
+            </button>
+            <button class="popup-btn secondary" id="btnSetSkinSecondary">
+                <i class="fa-solid fa-2"></i> Set Secondary
+            </button>
+            <button class="popup-btn cancel" id="btnCancelSkin">
+                Cancel
+            </button>
+        </div>
+    </div>
+    
+
+    <div id="update-notifier-overlay" class="update-notifier-overlay visible" style="display: flex;">
+        <div class="update-notifier-modal">
+            <div class="update-notifier-header">
+                <button id="update-notifier-close" class="update-notifier-close">×</button>
+                <h2 class="update-notifier-title">🎉 What's New</h2>
+                <div class="update-notifier-version" id="update-notifier-version">v1.2.1</div>
+                <div class="update-notifier-date" id="update-notifier-date">21/01/2026</div>
+            </div>
+            <div class="update-notifier-body">
+                <div id="update-notifier-content"><div class="changelog-section"><div class="changelog-header"><span class="changelog-icon">🔧</span> Fixed</div><ul class="changelog-list"><li>Fixed the issue where cells were still being drawn after the server failed to find a cell, causing them to get stuck in rendering. Now, all cells are properly cleared during syncing.</li></ul></div></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="wasmLoader.js"></script>
+    <script src="bundle.js"></script></div></div><div id="toast-container" style="position: absolute; top: 80px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 10px; pointer-events: none; z-index: 10000;"><div style="padding: 8px 16px; border-radius: 20px; background-color: rgba(0, 0, 0, 0.7); color: rgb(255, 255, 255); font-family: Ubuntu, sans-serif; font-size: 14px; font-weight: bold; box-shadow: rgba(0, 0, 0, 0.3) 0px 2px 10px; opacity: 1; transition: opacity 0.3s, transform 0.3s; transform: translateY(0px); backdrop-filter: blur(4px); border-width: 1px 1px 1px 4px; border-style: solid; border-color: rgba(255, 255, 255, 0.1) rgba(255, 255, 255, 0.1) rgba(255, 255, 255, 0.1) rgb(0, 185, 232); border-image: initial; pointer-events: auto; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-circle-info"></i>
+            <span style="flex-grow: 1;">Primary Tab Connecting...</span>
+            <i class="fa-solid fa-xmark toast-close" style="cursor: pointer; opacity: 0.8; margin-left: 8px;"></i>
+        </div></div><div class="bot-hud"><div class="bot-header">DEV BOT CONTROL</div><div class="bot-controls"><div class="bot-input-row"><input class="bot-input" placeholder="Bot Nickname"></div><div class="bot-input-row"><button class="bot-btn">-</button><button class="bot-btn">+</button></div><div class="bot-count-display" id="bot-count-display">Active Bots: 0</div></div><div class="bot-control-row"><label class="bot-checkbox-label">Auto Respawn</label><input type="checkbox" class="bot-checkbox"></div><div class="bot-control-row"><label class="bot-checkbox-label">Auto Splitter</label><input type="checkbox" class="bot-checkbox"></div><div class="bot-list"></div></div>
+
+</body></html>
